@@ -133,6 +133,8 @@ static int write_to_file( const char *path, const char *new_content,  size_t siz
         files_content[file_idx][new_size] = '\0';
 
     printf("Written to file %s: %s\n", path, new_content); // for debug
+    printf("Encrypted content: %s\n", ciphertext); // for debug
+	return size;
 }
 
 /*========== Implementing LSYSFS ==========*/
@@ -194,6 +196,7 @@ static int do_read( const char *path, char *buffer, size_t size, off_t offset, s
 		return -1;
 	
 	unsigned char *content = files_content[ file_idx ];
+	printf("Content before decrypted: %s\n", content + offset); // for debug
 
 	unsigned char decrypted_data[256];
 	int decrypted_data_len = decrypt(content + offset, strlen(content) - offset, key, iv, decrypted_data);
@@ -201,6 +204,7 @@ static int do_read( const char *path, char *buffer, size_t size, off_t offset, s
     //"offset" is the place in the file’s content where we are going to start reading from.
 	// memcpy( buffer, content + offset, size );
     memcpy(buffer, decrypted_data + offset, decrypted_data_len);
+    printf("Read from file  %s after decrypted: %s\n", path, buffer); // for debug
 
 	// return strlen( content ) - offset;
     return decrypted_data_len;
