@@ -78,6 +78,10 @@ int main(void) {
     // Encrypt the plaintext
     ciphertext_len = encrypt(plaintext, strlen((char *)plaintext), key, iv, ciphertext);
 
+    // Show the encrypted text
+    printf("Encrypted text is:\n");
+    printf("%s\n", ciphertext);
+
     // Decrypt the ciphertext
     decryptedtext_len = decrypt(ciphertext, ciphertext_len, key, iv, decryptedtext);
 
