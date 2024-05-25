@@ -8,6 +8,19 @@
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
+#include "encryption.h"
+#include <openssl/rand.h>
+
+// Define a key and IV (these should be securely generated and stored in a real application)
+unsigned char key[32];
+unsigned char iv[16];
+
+// Initialize key and IV with random values (for simplicity)
+void initialize_crypto() {
+    if (!RAND_bytes(key, sizeof(key)) || !RAND_bytes(iv, sizeof(iv))) {
+        handleErrors();
+    }
+}
 
 /*========== Initializing Data Structures ==========*/
 //names of directories
@@ -101,21 +114,26 @@ static int write_to_file( const char *path, const char *new_content,  size_t siz
 	if ( file_idx == -1 ) // No such file
 		return -ENOENT;
 	
+	unsigned char ciphertext[256];
+    int ciphertext_len = encrypt((unsigned char *)new_content, size, key, iv, ciphertext);
+
 	// Update the file size if necessary
-    size_t new_size = offset + size;
-	printf("Update the file size: %ld\n",new_size); // for debug
+    // size_t new_size = offset + size;
+	size_t new_size = offset + ciphertext_len;
 	// Resize the file's content buffer if necessary
     if (new_size >= sizeof(files_content[file_idx])) {
         return -ENOMEM;  // Not enough memory
     }
 	
 	// Write the data to the file's content buffer
-    strncpy(files_content[file_idx] + offset, new_content, size);
-
+    // strncpy(files_content[file_idx] + offset, new_content, size);
+    strncpy(files_content[file_idx] + offset, (char *)ciphertext, ciphertext_len);
+    
     if (new_size > strlen(files_content[file_idx]))
         files_content[file_idx][new_size] = '\0';
-		
-	printf("Written to file %s: %s\n", path, new_content); // for debug
+
+    printf("Written to file %s: %s\n", path, new_content); // for debug
+    printf("Written to file %s: %s\n", path, ciphertext); // for debug
 }
 
 /*========== Implementing LSYSFS ==========*/
@@ -176,12 +194,16 @@ static int do_read( const char *path, char *buffer, size_t size, off_t offset, s
 	if ( file_idx == -1 )
 		return -1;
 	
-	char *content = files_content[ file_idx ];
-	
+	unsigned char *content = files_content[ file_idx ];
+
+	unsigned char decrypted_data[256];
+	int decrypted_data_len = decrypt(content + offset, size, key, iv, decrypted_data);
     //"offset" is the place in the file’s content where we are going to start reading from.
-	memcpy( buffer, content + offset, size );
-		
-	return strlen( content ) - offset;
+	// memcpy( buffer, content + offset, size );
+    memcpy(buffer, decrypted_data + offset, decrypted_data_len);
+
+	// return strlen( content ) - offset;
+    return decrypted_data_len;
 }
 
 static int do_mkdir( const char *path, mode_t mode )
@@ -253,10 +275,10 @@ static struct fuse_operations operations = {
     .readdir	= do_readdir,
     .read		= do_read,
     .mkdir		= do_mkdir,
-		.rmdir    	= do_rmdir,
+	.rmdir    	= do_rmdir,
     .mknod		= do_mknod,
     .write		= do_write,
-		.utimens    = do_utimens,
+	.utimens    = do_utimens,
 };
 
 int main( int argc, char *argv[] )
