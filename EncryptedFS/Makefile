@@ -7,7 +7,7 @@ LDFLAGS = -lssl -lcrypto
 
 build: $(FILESYSTEM_FILES)
 	$(COMPILER) -g -fstack-protector-all $(CFLAGS) $(FILESYSTEM_FILES) -o lsysfs `pkg-config fuse --cflags --libs` $(LDFLAGS)
-	echo 'To Mount: ./lsysfs -f [mount point]'
+	echo 'To Mount: ./lsysfs -f [mount point] [is_correct_key]'
 
 clean:
 	rm -f lsysfs

@@ -7,15 +7,17 @@
 #include <time.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <errno.h>
 #include "encryption.h"
 #include <openssl/rand.h>
 
 // Define a key and IV (these should be securely generated and stored in a real application)
-// unsigned char key[32];
-// unsigned char iv[16];
+unsigned char key[32];
+unsigned char iv[16];
 unsigned char file_keys[256][32];
 unsigned char file_ivs[256][16];
+bool correct_key = true;
 
 
 // Initialize key and IV with random values (for simplicity)
@@ -208,7 +210,15 @@ static int do_read( const char *path, char *buffer, size_t size, off_t offset, s
 	printf("Content before decrypted: %s\n", content + offset); // for debug
 
 	unsigned char decrypted_data[256];
-	int decrypted_data_len = decrypt(content + offset, strlen(content) - offset, file_keys[file_idx], file_ivs[file_idx], decrypted_data);
+	if(correct_key){
+		memcpy(key, file_keys[file_idx], 32);
+		memcpy(iv, file_ivs[file_idx], 16);
+	}else{
+		if (!RAND_bytes(key, sizeof(key)) || !RAND_bytes(iv, sizeof(iv))) {
+        	handleErrors();
+    	}
+	}
+	int decrypted_data_len = decrypt(content + offset, strlen(content) - offset, key, iv, decrypted_data);
 
     //"offset" is the place in the file’s content where we are going to start reading from.
 	// memcpy( buffer, content + offset, size );
@@ -294,9 +304,30 @@ static struct fuse_operations operations = {
 	.utimens    = do_utimens,
 };
 
-int main( int argc, char *argv[] )
-{
-	// initialize_crypto();
-	printf("Starting LSYSFS...\n");
-	return fuse_main( argc, argv, &operations, NULL );
+int main(int argc, char *argv[]) {
+    // if (argc < 4) {
+    //     fprintf(stderr, "Usage: %s -f <mount_point> <is_correct_key>\n", argv[0]);
+    //     return 1;
+    // }
+
+    // Extract the encryption key
+    char *is_correct_key = argv[3];
+    if (strcmp(is_correct_key, "0") == 0) {
+        correct_key = false;
+    } else {
+        correct_key = true;
+    }
+    // Prepare arguments for fuse_main
+    int fuse_argc = argc - 1;
+    char **fuse_argv = malloc(fuse_argc * sizeof(char *));
+    fuse_argv[0] = argv[0]; // program name
+    for (int i = 1; i < fuse_argc; i++) {
+        fuse_argv[i] = argv[i]; // skip the key argument
+    }
+
+    printf("Starting LSYSFS...\n");
+    int ret = fuse_main(fuse_argc, fuse_argv, &operations, NULL);
+    
+    free(fuse_argv);
+    return ret;
 }
