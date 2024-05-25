@@ -196,7 +196,7 @@ static int do_read( const char *path, char *buffer, size_t size, off_t offset, s
 	unsigned char *content = files_content[ file_idx ];
 
 	unsigned char decrypted_data[256];
-	int decrypted_data_len = decrypt(content + offset, strlen(content), key, iv, decrypted_data);
+	int decrypted_data_len = decrypt(content + offset, strlen(content) - offset, key, iv, decrypted_data);
 
     //"offset" is the place in the file’s content where we are going to start reading from.
 	// memcpy( buffer, content + offset, size );
@@ -283,6 +283,7 @@ static struct fuse_operations operations = {
 
 int main( int argc, char *argv[] )
 {
+	initialize_crypto();
 	printf("Starting LSYSFS...\n");
 	return fuse_main( argc, argv, &operations, NULL );
 }
