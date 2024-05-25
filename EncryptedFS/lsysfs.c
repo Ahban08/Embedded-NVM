@@ -12,15 +12,18 @@
 #include <openssl/rand.h>
 
 // Define a key and IV (these should be securely generated and stored in a real application)
-unsigned char key[32];
-unsigned char iv[16];
+// unsigned char key[32];
+// unsigned char iv[16];
+unsigned char file_keys[256][32];
+unsigned char file_ivs[256][16];
+
 
 // Initialize key and IV with random values (for simplicity)
-void initialize_crypto() {
-    if (!RAND_bytes(key, sizeof(key)) || !RAND_bytes(iv, sizeof(iv))) {
-        handleErrors();
-    }
-}
+// void initialize_crypto() {
+//     if (!RAND_bytes(key, sizeof(key)) || !RAND_bytes(iv, sizeof(iv))) {
+//         handleErrors();
+//     }
+// }
 
 /*========== Initializing Data Structures ==========*/
 //names of directories
@@ -75,6 +78,12 @@ void add_file( const char *filename )
 	curr_file_idx++;
 	strcpy( files_list[ curr_file_idx ], filename );
 	
+	// Generate a unique key and IV for each file
+    if (!RAND_bytes(file_keys[curr_file_idx], sizeof(file_keys[curr_file_idx])) ||
+        !RAND_bytes(file_ivs[curr_file_idx], sizeof(file_ivs[curr_file_idx]))) {
+        handleErrors();
+    }
+
     // [inode] : curr_file_idx = curr_file_content_idx 
 	curr_file_content_idx++;
 	strcpy( files_content[ curr_file_content_idx ], "" );
@@ -115,7 +124,7 @@ static int write_to_file( const char *path, const char *new_content,  size_t siz
 		return -ENOENT;
 	
 	unsigned char ciphertext[256];
-    int ciphertext_len = encrypt((unsigned char *)new_content, size, key, iv, ciphertext);
+    int ciphertext_len = encrypt((unsigned char *)new_content, size, file_keys[file_idx], file_ivs[file_idx], ciphertext);
 
 	// Update the file size if necessary
     // size_t new_size = offset + size;
@@ -199,7 +208,7 @@ static int do_read( const char *path, char *buffer, size_t size, off_t offset, s
 	printf("Content before decrypted: %s\n", content + offset); // for debug
 
 	unsigned char decrypted_data[256];
-	int decrypted_data_len = decrypt(content + offset, strlen(content) - offset, key, iv, decrypted_data);
+	int decrypted_data_len = decrypt(content + offset, strlen(content) - offset, file_keys[file_idx], file_ivs[file_idx], decrypted_data);
 
     //"offset" is the place in the file’s content where we are going to start reading from.
 	// memcpy( buffer, content + offset, size );
@@ -287,7 +296,7 @@ static struct fuse_operations operations = {
 
 int main( int argc, char *argv[] )
 {
-	initialize_crypto();
+	// initialize_crypto();
 	printf("Starting LSYSFS...\n");
 	return fuse_main( argc, argv, &operations, NULL );
 }
