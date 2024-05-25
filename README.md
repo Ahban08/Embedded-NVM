@@ -25,3 +25,5 @@ Part 5 : File Operations with Encryption: Ensure all file operations (read, writ
 Part 6  : Testing and Validation: Conduct comprehensive tests to verify the functionality with encrypted files. Ensure encrypted files are unreadable without the correct decryption key and readable with it.
 
 Part 7 : Demonstration and Presentation: Make appointment with TA to demonstrate your developed encrypted FS on FUSE. You should detail the project architecture, encountered challenges, implemented solutions, and key learnings.
+
+Note in notion: https://persistent-moustache-548.notion.site/HW2-4df6b0d27e35420485d968729bad1437?pvs=25
